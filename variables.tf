@@ -7,12 +7,12 @@
 
 variable "region" {
   description = "The region where the resources are created."
-  default     = "us-west-1"
+  default     = "us-east-1"
 }
 
 variable "availability_zone" {
   description = "Provide the specific availability zone to deploy the first subnet."
-  default     = "us-west-1a"
+  default     = "us-east-1a"
 }
 
 variable "address_space" {
