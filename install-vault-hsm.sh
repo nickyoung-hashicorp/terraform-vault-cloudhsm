@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Setup vault enterprise as server
+# Setup Vault Enterprise+HSM
 set -e
 
 # USER VARS
@@ -8,7 +8,7 @@ NODE_NAME="${1:-$(hostname -s)}"
 VAULT_VERSION="1.7.3"
 VAULT_DIR=/usr/local/bin
 VAULT_CONFIG_DIR=/etc/vault.d
-VAULT_DATA_DIR=/opt/vault
+VAULT_DATA_DIR=/tmp/vault
 
 # CALCULATED VARS
 VAULT_PATH=${VAULT_DIR}/vault
@@ -62,33 +62,11 @@ echo "Creating Vault user and directories"
 sudo mkdir --parents "${VAULT_CONFIG_DIR}"
 sudo useradd --system --home "${VAULT_CONFIG_DIR}" --shell /bin/false vault
 sudo mkdir --parents "${VAULT_DATA_DIR}"
-sudo chown --recursive vault:vault "${VAULT_DATA_DIR}"
-
-echo "Creating directory for Oracle DB plugin"
-sudo mkdir -pm 0755 /data/vault/plugins
-sudo chown -R vault:vault /data/vault/plugins
 
 
 echo "Creating vault config for ${VAULT_VERSION}"
 sudo tee "${VAULT_CONFIG_DIR}/vault.hcl" > /dev/null <<VAULTCONFIG
-ui = true
-
-listener "tcp" {
-  address          = "0.0.0.0:8200"
-  tls_disable      = true
-}
-
-storage "file" {
-  path = "/opt/vault"
-}
-
-# Integrated Storage example
-# disable_mlock = true
-# storage "raft" {
-#   path    = "/opt/vault"
-#   node_id = "vault-1"
-# }
-
+# Provide your AWS CloudHSM cluster connection information
 seal "pkcs11" {
   lib = "/opt/cloudhsm/lib/libcloudhsm_pkcs11.so"
   slot = "1"
@@ -97,6 +75,20 @@ seal "pkcs11" {
   hmac_key_label = "hsm_hmac_demo"
   generate_key = "true"
 }
+
+# Configure the storage backend for Vault
+storage "file" {
+  path = "/tmp/vault"
+}
+
+# Addresses and ports on which Vault will respond to requests
+listener "tcp" {
+  address          = "0.0.0.0:8200"
+  tls_disable      = "true"
+}
+
+ui = true
+disable_mlock = true
 VAULTCONFIG
 
 sudo chown --recursive vault:vault "${VAULT_CONFIG_DIR}"
@@ -111,6 +103,8 @@ Documentation=https://www.vaultproject.io/docs/
 Requires=network-online.target
 After=network-online.target
 ConditionFileNotEmpty=/etc/vault.d/vault.hcl
+StartLimitIntervalSec=60
+StartLimitBurst=3
 
 [Service]
 User=vault
@@ -124,19 +118,19 @@ AmbientCapabilities=CAP_IPC_LOCK
 Capabilities=CAP_IPC_LOCK+ep
 CapabilityBoundingSet=CAP_SYSLOG CAP_IPC_LOCK
 NoNewPrivileges=yes
-ExecStart=VAULTBINDIR/vault server -config=/etc/vault.d/vault.hcl
+ExecStart=/usr/local/bin/vault server -config=/etc/vault.d/vault.hcl
 ExecReload=/bin/kill --signal HUP $MAINPID
 KillMode=process
 KillSignal=SIGINT
 Restart=on-failure
 RestartSec=5
 TimeoutStopSec=30
+StartLimitInterval=60
 StartLimitIntervalSec=60
 StartLimitBurst=3
 LimitNOFILE=65536
+LimitMEMLOCK=infinity
 
 [Install]
 WantedBy=multi-user.target
 SYSDSERVICE
-
-sudo sed -i "s|VAULTBINDIR|$VAULT_DIR|g" /etc/systemd/system/vault.service
