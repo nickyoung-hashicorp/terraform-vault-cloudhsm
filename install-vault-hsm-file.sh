@@ -8,7 +8,7 @@ NODE_NAME="${1:-$(hostname -s)}"
 VAULT_VERSION="1.7.3"
 VAULT_DIR=/usr/local/bin
 VAULT_CONFIG_DIR=/etc/vault.d
-VAULT_DATA_DIR=/tmp/vault
+VAULT_DATA_DIR=/opt/vault
 
 # CALCULATED VARS
 VAULT_PATH=${VAULT_DIR}/vault
@@ -78,7 +78,7 @@ seal "pkcs11" {
 
 # Configure the storage backend for Vault
 storage "file" {
-  path = "/tmp/vault"
+  path = "/opt/vault"
 }
 
 # Addresses and ports on which Vault will respond to requests
