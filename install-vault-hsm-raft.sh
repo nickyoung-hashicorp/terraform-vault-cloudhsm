@@ -8,7 +8,7 @@ NODE_NAME="${1:-$(hostname -s)}"
 VAULT_VERSION="1.7.3"
 VAULT_DIR=/usr/local/bin
 VAULT_CONFIG_DIR=/etc/vault.d
-VAULT_DATA_DIR=/tmp/vault
+VAULT_DATA_DIR=/opt/vault
 
 # CALCULATED VARS
 VAULT_PATH=${VAULT_DIR}/vault
@@ -62,6 +62,7 @@ echo "Creating Vault user and directories"
 sudo mkdir --parents "${VAULT_CONFIG_DIR}"
 sudo useradd --system --home "${VAULT_CONFIG_DIR}" --shell /bin/false vault
 sudo mkdir --parents "${VAULT_DATA_DIR}"
+sudo chown --recursive vault:vault "${VAULT_DATA_DIR}"
 
 
 echo "Creating vault config for ${VAULT_VERSION}"
@@ -77,8 +78,9 @@ seal "pkcs11" {
 }
 
 # Configure the storage backend for Vault
-storage "file" {
-  path = "/tmp/vault"
+storage "raft" {
+  path    = "/opt/vault"
+  node_id = "vault-1"
 }
 
 # Addresses and ports on which Vault will respond to requests
@@ -89,6 +91,8 @@ listener "tcp" {
 
 ui = true
 disable_mlock = true
+api_addr = "http://127.0.0.1:8200"
+cluster_addr = "http://127.0.0.1:8201"
 VAULTCONFIG
 
 sudo chown --recursive vault:vault "${VAULT_CONFIG_DIR}"
