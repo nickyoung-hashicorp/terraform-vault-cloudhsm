@@ -1,0 +1,11 @@
+version: "3"
+containers:
+- name: cloud-client
+  image: gcr.io/instruqt/cloud-client
+  shell: /bin/bash -l
+  ports:
+  - 80
+aws_accounts:
+- name: TF-WORKSHOP
+  managed_policies:
+  - arn:aws:iam::aws:policy/AdministratorAccess

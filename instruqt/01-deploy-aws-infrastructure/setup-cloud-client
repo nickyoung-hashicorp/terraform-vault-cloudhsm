@@ -1,0 +1,50 @@
+#!/bin/bash -l
+set -e
+
+# Allow instruqt time to do its thing
+sleep 15
+
+# Source Instruqt env for cloud creds
+# source /etc/profile.d/instruqt-env.sh
+
+# Set Path
+echo "export PATH=/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" >> ~/.bashrc
+
+cat > .bashrc << EOF
+#!/bin/bash
+export AWS_DEFAULT_REGION=us-west-1
+EOF
+
+#ssh
+# aws ec2 import-key-pair --key-name "instruqt" --public-key-material file://~/.ssh/id_rsa.pub
+# eval `ssh-agent -s`
+
+cat << EOF > ~/.ssh/config
+Host *
+    StrictHostKeyChecking no
+EOF
+
+# Install Terraform
+cd /tmp
+echo "installing terraform..."
+curl -O https://releases.hashicorp.com/terraform/1.0.2/terraform_1.0.2_linux_amd64.zip
+unzip *.zip
+mv terraform /usr/local/bin/terraform
+rm -f *.zip
+cd /root
+
+# Clone the vault-ent-aws-cloudhsm repo
+git clone https://github.com/nickyoung-hashicorp/terraform-vault-cloudhsm.git
+GITDIR="/root/terraform-vault-cloudhsm"
+set-workdir /root/terraform-vault-cloudhsm
+cd ${GITDIR}
+
+# Add AWS keys to systemd environment
+systemctl import-environment AWS_ACCESS_KEY_ID
+systemctl import-environment AWS_SECRET_ACCESS_KEY
+
+# Install AWS CLI
+apt update -y
+apt install -y awscli
+
+exit 0
